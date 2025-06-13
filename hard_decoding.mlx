@@ -1,0 +1,114 @@
+function Decoded_msg_hard = viterbi_hard(g, received_bit)
+    % Extract generator polynomial details
+    No_Of_Gen = size(g, 1);
+    Kc = size(g, 2);
+    NumStates = 2^(Kc - 1);
+
+    % Initialize state transition and output tables
+    NextStates = zeros(NumStates, 2);
+    Outputs = zeros(NumStates, 2);
+
+    % For hard decoding approximation: convert soft input to hard bits
+    received_bit = received_bit < 0;
+
+    %% Calculate NextStates and Outputs for all states
+    for state = 0:(NumStates - 1)
+        for input = 0:1
+            % Determine next state from current state and input
+            nextSt = bitshift(state, -1);
+            if input == 1
+                nextSt = nextSt + 2^(Kc - 2);
+            end
+            NextStates(state + 1, input + 1) = nextSt;
+
+            % Current state bits + input as MSB
+            state2 = dec2bin(state, Kc - 1) - '0';
+            state2 = [input, state2];
+
+            % Compute encoder output
+            temp = [];
+            for j = 1:No_Of_Gen
+                temp = [temp, mod(sum(bitand(g(j, :), state2)), 2)];
+            end
+            temp_string = num2str(temp);
+            sequence = strrep(temp_string, ' ', '');
+            Outputs(state + 1, input + 1) = bin2dec(sequence);
+        end
+    end
+
+    %% Trellis Graph Computation using Hamming Distance
+    column = length(received_bit) / No_Of_Gen + 1;
+    dp = repmat(1000, NumStates, column);  % initialize path metric
+    dp(1, 1) = 0;
+    bit_idx = 1;
+
+    for i = 1:column - 1
+        rec_out = [];
+        for j = 1:No_Of_Gen
+            rec_out = [rec_out, received_bit(bit_idx)];
+            bit_idx = bit_idx + 1;
+        end
+
+        for st = 1:NumStates
+            exp_out1 = dec2bin(Outputs(st, 1), No_Of_Gen) - '0';
+            exp_out2 = dec2bin(Outputs(st, 2), No_Of_Gen) - '0';
+
+            % Hamming distances
+            Hamming_dist_0 = sum(rec_out ~= exp_out1);
+            Hamming_dist_1 = sum(rec_out ~= exp_out2);
+
+            % Path metric update
+            dp(NextStates(st, 1) + 1, i + 1) = ...
+                min(dp(NextStates(st, 1) + 1, i + 1), dp(st, i) + Hamming_dist_0);
+
+            dp(NextStates(st, 2) + 1, i + 1) = ...
+                min(dp(NextStates(st, 2) + 1, i + 1), dp(st, i) + Hamming_dist_1);
+        end
+    end
+
+    %% Backtracking to Retrieve Decoded Message
+    curr_st = 0;
+    Decoded_msg_hard = [];
+
+    for i = column - 1:-1:1
+        % Identify previous states that lead to current state
+        prev_states = [];
+        for st = 1:NumStates
+            if NextStates(st, 1) == curr_st
+                prev_states = [prev_states; st, 0];  % input 0
+            end
+            if NextStates(st, 2) == curr_st
+                prev_states = [prev_states; st, 1];  % input 1
+            end
+        end
+
+        % Find best path with minimum metric
+        min_metric = Inf;
+        best_input = 0;
+        best_index = -1;
+
+        for p = 1:size(prev_states, 1)
+            st = prev_states(p, 1);
+            input = prev_states(p, 2);
+            exp_out = dec2bin(Outputs(st, input + 1), No_Of_Gen) - '0';
+
+            rec = [];
+            for id = No_Of_Gen * (i - 1) + 1 : No_Of_Gen * i
+                rec = [rec; received_bit(id)];
+            end
+
+            Hamming_dist = sum(rec ~= exp_out);
+            total_metric = dp(st, i) + Hamming_dist;
+
+            if total_metric < min_metric
+                min_metric = total_metric;
+                best_input = input;
+                best_index = p;
+            end
+        end
+
+        % Prepend decoded bit and update state
+        Decoded_msg_hard = [best_input, Decoded_msg_hard];
+        curr_st = prev_states(best_index, 1) - 1;
+    end
+end

@@ -1,0 +1,92 @@
+function Decoded_msg_soft = viterbi_soft(g, received_bit)
+    No_Of_Gen = size(g, 1);
+    Kc = size(g, 2);
+    NumStates = 2^(Kc - 1);
+    NextStates = zeros(2^(Kc - 1), 2);
+    Outputs = zeros(2^(Kc - 1), 2);
+
+    %% calculating nextstate and Outputs for all states
+    for state = 0:(2^(Kc - 1) - 1)
+        for input = 0:1
+            nextSt = bitshift(state, -1);
+            if (input == 1)
+                nextSt = nextSt + (2^(Kc - 2));
+            end
+            NextStates(state + 1, input + 1) = nextSt;
+            state2 = dec2bin(state, Kc - 1) - '0';
+            state2 = [input, state2];
+            temp = [];
+            for j = 1:No_Of_Gen
+                temp = [temp, mod(sum(bitand(g(j, :), state2)), 2)];
+            end
+            temp_string = num2str(temp);
+            sequence = strrep(temp_string, ' ', '');
+            Outputs(state + 1, input + 1) = bin2dec(sequence);
+        end
+    end
+
+    %% computation of Trellis Graph
+    column = length(received_bit) / No_Of_Gen + 1;
+    dp = repmat(1000, NumStates, column);
+    dp(1, 1) = 0;
+    bit_idx = 1;
+
+    for i = 1:column - 1
+        rec_out = [];
+        for j = 1:No_Of_Gen
+            rec_out = [rec_out, received_bit(bit_idx)];
+            bit_idx = bit_idx + 1;
+        end
+        for st = 1:NumStates
+            exp_out1 = dec2bin(Outputs(st, 1), No_Of_Gen);
+            exp_out1 = exp_out1 - '0';
+            exp_out1 = 1 - 2 .* exp_out1;
+            exp_out2 = dec2bin(Outputs(st, 2), No_Of_Gen);
+            exp_out2 = exp_out2 - '0';
+            exp_out2 = 1 - 2 .* exp_out2;
+            euclidean_dist_0 = sum((rec_out - exp_out1) .^ 2);
+            euclidean_dist_1 = sum((rec_out - exp_out2) .^ 2);
+            dp(NextStates(st, 1) + 1, i + 1) = min(dp(NextStates(st, 1) + 1, i + 1), dp(st, i) + euclidean_dist_0);
+            dp(NextStates(st, 2) + 1, i + 1) = min(dp(NextStates(st, 2) + 1, i + 1), dp(st, i) + euclidean_dist_1);
+        end
+    end
+
+    %% Backtracking for Original Message
+    curr_st = 0;
+    Decoded_msg_soft = [];
+
+    for i = column - 1:-1:1
+        prev_states = [];
+        for st = 1:NumStates
+            if NextStates(st, 1) == curr_st
+                prev_states = [prev_states; st, 0];
+            end
+            if NextStates(st, 2) == curr_st
+                prev_states = [prev_states; st, 1];
+            end
+        end
+        min_metric = Inf;
+        best_input = 0;
+        best_index = -1;
+        for p = 1:size(prev_states, 1)
+            st = prev_states(p, 1);
+            input = prev_states(p, 2);
+            exp_out = (dec2bin(Outputs(st, input + 1), No_Of_Gen));
+            exp_out = exp_out - '0';
+            exp_out = 1 - 2 * exp_out;
+            rec = [];
+            for id = No_Of_Gen * (i - 1) + 1: No_Of_Gen * (i)
+                rec = [rec; received_bit(id)];
+            end
+            dist = sum((rec - exp_out) .^ 2);
+            total_metric = dp(st, i) + dist;
+            if total_metric < min_metric
+                min_metric = total_metric;
+                best_input = input;
+                best_index = p;
+            end
+        end
+        Decoded_msg_soft = [best_input, Decoded_msg_soft];
+        curr_st = prev_states(best_index, 1) - 1;
+    end
+end
