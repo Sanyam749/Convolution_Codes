@@ -1,4 +1,4 @@
-# 📡 Convolutional Codes Simulation in MATLAB
+# Convolutional Codes Simulation in MATLAB
 
 This project simulates the full digital communication chain using **convolutional codes**, demonstrating the process of encoding, modulation, transmission over a noisy channel, and decoding using both **hard** and **soft Viterbi decoding**.
 
@@ -6,7 +6,7 @@ It performs a Monte-Carlo Simulation and evaluates the **Bit Error Rate (BER)** 
 
 ---
 
-## 🧠 Concepts Used
+## Concepts Used
 
 - Convolutional Encoding using generator polynomials
 - State diagram construction for trellis decoding
@@ -18,7 +18,7 @@ It performs a Monte-Carlo Simulation and evaluates the **Bit Error Rate (BER)** 
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```bash
 📦 convolutional-codes/
@@ -32,7 +32,7 @@ It performs a Monte-Carlo Simulation and evaluates the **Bit Error Rate (BER)** 
 
 ---
 
-## ⚙️ Parameters Simulated
+## Parameters Simulated
 
 The project includes simulations for the following convolutional coding configurations:
 
@@ -46,7 +46,7 @@ The appropriate generator matrix is automatically selected in `main.m` using a `
 
 ---
 
-## 🚀 How to Run This Project
+## How to Run This Project
 
 1. Open **MATLAB**.
 2. Clone or download this repository.
@@ -63,7 +63,7 @@ The appropriate generator matrix is automatically selected in `main.m` using a `
 
 ---
 
-## 📊 Sample Output
+## Sample Output
 
 - A semi-logarithmic plot (`semilogy`) displaying BER vs. Eb/N0
 - Observations include:
@@ -72,14 +72,14 @@ The appropriate generator matrix is automatically selected in `main.m` using a `
 
 ---
 
-## ✅ Dependencies
+## Dependencies
 
 - MATLAB R2019 or later (or GNU Octave with adjustments)
 - No external toolboxes required
 
 ---
 
-## 📌 Learnings
+## Learnings
 
 - Fundamentals of convolutional codes and Viterbi decoding
 - Differences between hard and soft decision decoding
